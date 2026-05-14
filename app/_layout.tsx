@@ -1,10 +1,10 @@
 import "../global.css";
 
-import { Stack } from "expo-router";
 import { ClerkProvider, useAuth } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { ConvexReactClient } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
+import { Stack } from "expo-router";
 
 function getEnv(name: string): string {
   const value = process.env[name];
@@ -27,7 +27,7 @@ export default function RootLayout() {
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-        <Stack />
+        <Stack screenOptions={{ headerShown: false }} />
       </ConvexProviderWithClerk>
     </ClerkProvider>
   );

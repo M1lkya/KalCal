@@ -1,9 +1,22 @@
-import { Text, View } from "react-native";
+// app/index.tsx
+
+import { useAuth } from "@clerk/expo";
+import { useRouter } from "expo-router";
+import { useEffect } from "react";
 
 export default function Index() {
-  return (
-    <View className="flex-1 items-center justify-center bg-white">
-      <Text className="text-lg font-bold">Edit app/index.tsx to edit this screen.</Text>
-    </View>
-  );
+  const router = useRouter();
+  const { isLoaded, isSignedIn } = useAuth();
+
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    if (isSignedIn) {
+      router.replace("/home");
+    } else {
+      router.replace("/SignUp");
+    }
+  }, [isLoaded, isSignedIn]);
+
+  return null;
 }
