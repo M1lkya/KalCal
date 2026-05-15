@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { SocialConnections } from "@/components/ui/social-connections";
-import { COLORS } from "@/theme";
+import ThemeSwitcher from "@/components/ui/ThemeSwitcher";
+import { useAppTheme } from "@/theme/ThemeContext";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import * as React from "react";
@@ -14,6 +15,8 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
 export default function SignUp() {
   const router = useRouter();
+  const { colors } = useAppTheme();
+
   const [checked, setChecked] = React.useState(false);
 
   function onCheckedChange(checked: boolean) {
@@ -39,103 +42,155 @@ export default function SignUp() {
   return (
     <SafeAreaView
       className="h-full"
-      style={{ backgroundColor: COLORS.background }}
+      style={{ backgroundColor: colors.background }}
     >
       <View
         className="h-full"
         style={{
           marginTop: verticalScale(10),
-          marginHorizontal: scale(15),
+          marginHorizontal: scale(18),
+          position: "relative",
         }}
       >
-        <View>
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            zIndex: 10,
+          }}
+        >
+          <ThemeSwitcher />
+        </View>
+
+        <View
+          style={{
+            paddingRight: scale(56),
+            paddingTop: verticalScale(8),
+          }}
+        >
+          <Text
+            style={{
+              color: colors.primary,
+              fontSize: moderateScale(13),
+              fontWeight: "700",
+              letterSpacing: 0.4,
+              marginBottom: verticalScale(10),
+              textTransform: "uppercase",
+            }}
+          >
+            Create account
+          </Text>
+
           <Text
             className="font-semibold"
             style={{
-              fontSize: moderateScale(45),
-              color: COLORS.text,
-              letterSpacing: -1.5,
+              fontSize: moderateScale(38),
+              color: colors.text,
+              letterSpacing: -1.2,
+              lineHeight: moderateScale(43),
             }}
           >
-            Sign Up
+            Start fresh.
           </Text>
 
           <Text
             style={{
-              marginTop: verticalScale(6),
+              marginTop: verticalScale(8),
               fontSize: moderateScale(15),
-              color: COLORS.muted,
+              color: colors.muted,
+              lineHeight: moderateScale(22),
+              maxWidth: scale(280),
             }}
           >
-            Create your account to get started.
+            Make your account in a few seconds and jump right in.
           </Text>
         </View>
 
         <View className="flex-1 justify-center">
           <View
             style={{
-              backgroundColor: COLORS.surface,
-              borderColor: COLORS.border,
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
               borderWidth: 1,
-              borderRadius: moderateScale(24),
-              paddingVertical: verticalScale(22),
-              paddingHorizontal: scale(12),
-              shadowColor: COLORS.text,
-              shadowOpacity: 0.05,
-              shadowRadius: 20,
-              shadowOffset: { width: 0, height: 8 },
+              borderRadius: moderateScale(28),
+              paddingVertical: verticalScale(24),
+              paddingHorizontal: scale(14),
+              shadowColor: colors.text,
+              shadowOpacity: 0.04,
+              shadowRadius: 24,
+              shadowOffset: { width: 0, height: 12 },
               elevation: 2,
             }}
           >
             <View
-              className="items-center"
               style={{
                 paddingHorizontal: scale(5),
-                marginBottom: verticalScale(10),
+                marginBottom: verticalScale(18),
               }}
             >
               <SocialConnections />
 
-              <Separator
-                style={{
-                  marginTop: verticalScale(14),
-                  backgroundColor: COLORS.border,
-                }}
-              />
+              <View
+                className="flex-row items-center"
+                style={{ marginTop: verticalScale(18) }}
+              >
+                <Separator
+                  style={{
+                    flex: 1,
+                    backgroundColor: colors.border,
+                  }}
+                />
+
+                <Text
+                  style={{
+                    color: colors.muted,
+                    fontSize: moderateScale(12),
+                    marginHorizontal: scale(12),
+                    fontWeight: "600",
+                  }}
+                >
+                  or continue with email
+                </Text>
+
+                <Separator
+                  style={{
+                    flex: 1,
+                    backgroundColor: colors.border,
+                  }}
+                />
+              </View>
             </View>
 
-            <View
-              className="items-center"
-              style={{ paddingHorizontal: scale(5) }}
-            >
+            <View style={{ paddingHorizontal: scale(5) }}>
               <Input
                 style={{
-                  height: verticalScale(44),
+                  height: verticalScale(46),
                   fontSize: moderateScale(15),
-                  marginBottom: verticalScale(10),
-                  backgroundColor: COLORS.background,
-                  borderColor: COLORS.border,
-                  color: COLORS.text,
-                  borderRadius: moderateScale(14),
+                  marginBottom: verticalScale(12),
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                  color: colors.text,
+                  borderRadius: moderateScale(16),
                 }}
-                placeholderTextColor={COLORS.muted}
+                placeholderTextColor={colors.muted}
                 keyboardType="email-address"
                 textContentType="emailAddress"
                 autoComplete="email"
-                placeholder="Email"
+                placeholder="Email address"
               />
 
               <Input
                 style={{
-                  height: verticalScale(44),
+                  height: verticalScale(46),
                   fontSize: moderateScale(15),
-                  marginBottom: verticalScale(10),
-                  backgroundColor: COLORS.background,
-                  borderColor: COLORS.border,
-                  color: COLORS.text,
-                  borderRadius: moderateScale(14),
+                  marginBottom: verticalScale(14),
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                  color: colors.text,
+                  borderRadius: moderateScale(16),
                 }}
-                placeholderTextColor={COLORS.muted}
+                placeholderTextColor={colors.muted}
                 keyboardType="default"
                 textContentType="password"
                 autoComplete="password"
@@ -150,10 +205,10 @@ export default function SignUp() {
             >
               <Checkbox
                 style={{
-                  width: scale(15),
-                  height: verticalScale(15),
-                  borderColor: checked ? COLORS.primary : COLORS.border,
-                  backgroundColor: checked ? COLORS.primary : COLORS.surface,
+                  width: scale(16),
+                  height: verticalScale(16),
+                  borderColor: checked ? colors.primary : colors.border,
+                  backgroundColor: checked ? colors.primary : colors.surface,
                 }}
                 aria-labelledby="terms-checkbox"
                 id="terms-checkbox"
@@ -163,8 +218,10 @@ export default function SignUp() {
 
               <Label
                 style={{
-                  fontSize: moderateScale(15),
-                  color: COLORS.muted,
+                  flex: 1,
+                  fontSize: moderateScale(14),
+                  color: colors.muted,
+                  lineHeight: moderateScale(20),
                 }}
                 nativeID="terms-checkbox"
                 htmlFor="terms-checkbox"
@@ -175,41 +232,41 @@ export default function SignUp() {
                   },
                 })}
               >
-                Accept terms and conditions
+                I agree to the terms and conditions
               </Label>
             </View>
 
             <View
               style={{
                 paddingHorizontal: scale(5),
-                marginTop: verticalScale(18),
+                marginTop: verticalScale(20),
               }}
             >
               <Button
                 style={{
-                  height: verticalScale(42),
-                  backgroundColor: COLORS.primary,
-                  borderRadius: moderateScale(14),
+                  height: verticalScale(46),
+                  backgroundColor: colors.primary,
+                  borderRadius: moderateScale(16),
                 }}
               >
                 <Text
                   className="font-semibold"
                   style={{
-                    color: COLORS.surface,
+                    color: "#FFFFFF",
                     fontSize: moderateScale(15),
                   }}
                 >
-                  Continue
+                  Create account
                 </Text>
               </Button>
 
               <View
                 className="flex-row justify-center items-center"
-                style={{ marginTop: verticalScale(16) }}
+                style={{ marginTop: verticalScale(18) }}
               >
                 <Text
                   style={{
-                    color: COLORS.muted,
+                    color: colors.muted,
                     fontSize: moderateScale(14),
                   }}
                 >
@@ -219,7 +276,7 @@ export default function SignUp() {
                 <Text
                   className="font-semibold"
                   style={{
-                    color: COLORS.primary,
+                    color: colors.primary,
                     fontSize: moderateScale(14),
                   }}
                   onPress={onSignInPress}
@@ -233,13 +290,13 @@ export default function SignUp() {
 
         <View
           style={{
-            paddingHorizontal: scale(18),
+            paddingHorizontal: scale(14),
             paddingBottom: verticalScale(16),
           }}
         >
           <Text
             style={{
-              color: COLORS.muted,
+              color: colors.muted,
               fontSize: moderateScale(12),
               textAlign: "center",
               lineHeight: moderateScale(18),
@@ -248,7 +305,7 @@ export default function SignUp() {
             By continuing or creating an account, you agree to our{" "}
             <Text
               className="font-medium"
-              style={{ color: COLORS.primary }}
+              style={{ color: colors.primary }}
               onPress={onTermsPress}
             >
               Terms and Conditions
@@ -256,7 +313,7 @@ export default function SignUp() {
             and{" "}
             <Text
               className="font-medium"
-              style={{ color: COLORS.primary }}
+              style={{ color: colors.primary }}
               onPress={onPrivacyPress}
             >
               Privacy Policy
