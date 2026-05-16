@@ -4,16 +4,52 @@ import { Separator } from "@/components/ui/separator";
 import { SocialConnections } from "@/components/ui/social-connections";
 import ThemeSwitcher from "@/components/ui/ThemeSwitcher";
 import { useAppTheme } from "@/theme/ThemeContext";
+import { useSignIn } from "@clerk/expo";
 import * as Haptics from "expo-haptics";
-import { useRouter } from "expo-router";
+import { type Href, useRouter } from "expo-router";
 import * as React from "react";
 import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
+type ClerkErrorLike = {
+  message?: string;
+  errors?: Array<{
+    message?: string;
+    longMessage?: string;
+  }>;
+};
+
+function getClerkErrorMessage(error: unknown) {
+  const clerkError = error as ClerkErrorLike | null;
+
+  return (
+    clerkError?.errors?.[0]?.longMessage ||
+    clerkError?.errors?.[0]?.message ||
+    clerkError?.message ||
+    "Something went wrong. Please try again."
+  );
+}
+
 export default function SignIn() {
   const router = useRouter();
-  const { colors } = useAppTheme();
+  const { signIn, fetchStatus } = useSignIn();
+  const { colors, themeName } = useAppTheme();
+
+  const primaryButtonTextColor =
+    themeName === "dark" ? colors.background : "#FFFFFF";
+
+  const [emailAddress, setEmailAddress] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [code, setCode] = React.useState("");
+  const [pendingClientTrust, setPendingClientTrust] = React.useState(false);
+  const [formError, setFormError] = React.useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
+
+  const isLoading = fetchStatus === "fetching";
+  const canSignIn =
+    emailAddress.trim().length > 0 && password.length > 0 && !isLoading;
+  const canVerifyEmail = code.trim().length > 0 && !isLoading;
 
   function onForgotPasswordPress() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -33,6 +69,131 @@ export default function SignIn() {
   function onPrivacyPress() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push("..");
+  }
+
+  async function finishSignIn() {
+    const { error } = await signIn.finalize({
+      navigate: ({ session }) => {
+        if (session?.currentTask) {
+          console.log(session.currentTask);
+          return;
+        }
+
+        router.replace("/" as Href);
+      },
+    });
+
+    if (error) {
+      setFormError(getClerkErrorMessage(error));
+    }
+  }
+
+  async function onSignInPress() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    if (!canSignIn) return;
+
+    setFormError(null);
+    setStatusMessage(null);
+
+    const { error } = await signIn.password({
+      emailAddress: emailAddress.trim(),
+      password,
+    });
+
+    if (error) {
+      setFormError(getClerkErrorMessage(error));
+      return;
+    }
+
+    if (signIn.status === "complete") {
+      await finishSignIn();
+      return;
+    }
+
+    if (signIn.status === "needs_client_trust") {
+      const emailCodeFactor = signIn.supportedSecondFactors.find(
+        (factor) => factor.strategy === "email_code",
+      );
+
+      if (!emailCodeFactor) {
+        setFormError("This sign-in needs another verification method.");
+        return;
+      }
+
+      const { error: emailCodeError } = await signIn.mfa.sendEmailCode();
+
+      if (emailCodeError) {
+        setFormError(getClerkErrorMessage(emailCodeError));
+        return;
+      }
+
+      setPendingClientTrust(true);
+      setStatusMessage("We sent a verification code to your email.");
+      return;
+    }
+
+    if (signIn.status === "needs_second_factor") {
+      setFormError(
+        "This account has multi-factor authentication enabled. Add your MFA flow next.",
+      );
+      return;
+    }
+
+    setFormError("Sign-in is not complete yet. Please try again.");
+  }
+
+  async function onVerifyEmailPress() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    if (!canVerifyEmail) return;
+
+    setFormError(null);
+    setStatusMessage(null);
+
+    const { error } = await signIn.mfa.verifyEmailCode({
+      code: code.trim(),
+    });
+
+    if (error) {
+      setFormError(getClerkErrorMessage(error));
+      return;
+    }
+
+    if (signIn.status === "complete") {
+      await finishSignIn();
+      return;
+    }
+
+    setFormError("Verification was accepted, but sign-in is not complete yet.");
+  }
+
+  async function onResendCodePress() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    if (isLoading) return;
+
+    setFormError(null);
+    setStatusMessage(null);
+
+    const { error } = await signIn.mfa.sendEmailCode();
+
+    if (error) {
+      setFormError(getClerkErrorMessage(error));
+      return;
+    }
+
+    setStatusMessage("A new verification code was sent.");
+  }
+
+  async function onEditEmailPress() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    await signIn.reset();
+    setPendingClientTrust(false);
+    setCode("");
+    setFormError(null);
+    setStatusMessage(null);
   }
 
   return (
@@ -119,144 +280,295 @@ export default function SignIn() {
               elevation: 2,
             }}
           >
-            <View
-              style={{
-                paddingHorizontal: scale(5),
-                marginBottom: verticalScale(18),
-              }}
-            >
-              <SocialConnections />
-
+            {!pendingClientTrust ? (
               <View
-                className="flex-row items-center"
-                style={{ marginTop: verticalScale(18) }}
+                style={{
+                  paddingHorizontal: scale(5),
+                  marginBottom: verticalScale(18),
+                }}
               >
-                <Separator
-                  style={{
-                    flex: 1,
-                    backgroundColor: colors.border,
-                  }}
-                />
+                <SocialConnections />
 
-                <Text
-                  style={{
-                    color: colors.muted,
-                    fontSize: moderateScale(12),
-                    marginHorizontal: scale(12),
-                    fontWeight: "600",
-                  }}
+                <View
+                  className="flex-row items-center"
+                  style={{ marginTop: verticalScale(18) }}
                 >
-                  or continue with email
-                </Text>
+                  <Separator
+                    style={{
+                      flex: 1,
+                      backgroundColor: colors.border,
+                    }}
+                  />
 
-                <Separator
-                  style={{
-                    flex: 1,
-                    backgroundColor: colors.border,
-                  }}
-                />
+                  <Text
+                    style={{
+                      color: colors.muted,
+                      fontSize: moderateScale(12),
+                      marginHorizontal: scale(12),
+                      fontWeight: "600",
+                    }}
+                  >
+                    or continue with email
+                  </Text>
+
+                  <Separator
+                    style={{
+                      flex: 1,
+                      backgroundColor: colors.border,
+                    }}
+                  />
+                </View>
               </View>
-            </View>
+            ) : null}
 
-            <View style={{ paddingHorizontal: scale(5) }}>
-              <Input
-                style={{
-                  height: verticalScale(46),
-                  fontSize: moderateScale(15),
-                  marginBottom: verticalScale(12),
-                  backgroundColor: colors.background,
-                  borderColor: colors.border,
-                  color: colors.text,
-                  borderRadius: moderateScale(16),
-                }}
-                placeholderTextColor={colors.muted}
-                keyboardType="email-address"
-                textContentType="emailAddress"
-                autoComplete="email"
-                placeholder="Email address"
-              />
-
-              <Input
-                style={{
-                  height: verticalScale(46),
-                  fontSize: moderateScale(15),
-                  marginBottom: verticalScale(10),
-                  backgroundColor: colors.background,
-                  borderColor: colors.border,
-                  color: colors.text,
-                  borderRadius: moderateScale(16),
-                }}
-                placeholderTextColor={colors.muted}
-                keyboardType="default"
-                textContentType="password"
-                autoComplete="password"
-                secureTextEntry
-                placeholder="Password"
-              />
-            </View>
-
-            <View className="items-end" style={{ paddingHorizontal: scale(5) }}>
+            {statusMessage ? (
               <Text
-                className="font-medium"
                 style={{
                   color: colors.primary,
-                  fontSize: moderateScale(14),
+                  fontSize: moderateScale(13),
+                  lineHeight: moderateScale(19),
+                  marginBottom: verticalScale(12),
+                  paddingHorizontal: scale(5),
+                  textAlign: "center",
                 }}
-                onPress={onForgotPasswordPress}
               >
-                Forgot password?
+                {statusMessage}
               </Text>
-            </View>
+            ) : null}
 
-            <View
-              style={{
-                paddingHorizontal: scale(5),
-                marginTop: verticalScale(20),
-              }}
-            >
-              <Button
+            {formError ? (
+              <Text
                 style={{
-                  height: verticalScale(46),
-                  backgroundColor: colors.primary,
-                  borderRadius: moderateScale(16),
+                  color: "#EF4444",
+                  fontSize: moderateScale(13),
+                  lineHeight: moderateScale(19),
+                  marginBottom: verticalScale(12),
+                  paddingHorizontal: scale(5),
+                  textAlign: "center",
                 }}
               >
-                <Text
-                  className="font-semibold"
+                {formError}
+              </Text>
+            ) : null}
+
+            {!pendingClientTrust ? (
+              <>
+                <View style={{ paddingHorizontal: scale(5) }}>
+                  <Input
+                    style={{
+                      height: verticalScale(46),
+                      fontSize: moderateScale(15),
+                      marginBottom: verticalScale(12),
+                      backgroundColor: colors.background,
+                      borderColor: colors.border,
+                      color: colors.text,
+                      borderRadius: moderateScale(16),
+                    }}
+                    placeholderTextColor={colors.muted}
+                    keyboardType="email-address"
+                    textContentType="emailAddress"
+                    autoComplete="email"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    value={emailAddress}
+                    onChangeText={setEmailAddress}
+                    placeholder="Email address"
+                  />
+
+                  <Input
+                    style={{
+                      height: verticalScale(46),
+                      fontSize: moderateScale(15),
+                      marginBottom: verticalScale(10),
+                      backgroundColor: colors.background,
+                      borderColor: colors.border,
+                      color: colors.text,
+                      borderRadius: moderateScale(16),
+                    }}
+                    placeholderTextColor={colors.muted}
+                    keyboardType="default"
+                    textContentType="password"
+                    autoComplete="password"
+                    secureTextEntry
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Password"
+                  />
+                </View>
+
+                <View
+                  className="items-end"
+                  style={{ paddingHorizontal: scale(5) }}
+                >
+                  <Text
+                    className="font-medium"
+                    style={{
+                      color: colors.primary,
+                      fontSize: moderateScale(14),
+                    }}
+                    onPress={onForgotPasswordPress}
+                  >
+                    Forgot password?
+                  </Text>
+                </View>
+
+                <View
                   style={{
-                    color: "#FFFFFF",
-                    fontSize: moderateScale(15),
+                    paddingHorizontal: scale(5),
+                    marginTop: verticalScale(20),
                   }}
                 >
-                  Sign in
-                </Text>
-              </Button>
+                  <Button
+                    disabled={!canSignIn}
+                    onPress={onSignInPress}
+                    style={{
+                      height: verticalScale(46),
+                      backgroundColor: colors.primary,
+                      borderRadius: moderateScale(16),
+                      opacity: canSignIn ? 1 : 0.6,
+                    }}
+                  >
+                    <Text
+                      className="font-semibold"
+                      style={{
+                        color: primaryButtonTextColor,
+                        fontSize: moderateScale(15),
+                      }}
+                    >
+                      {isLoading ? "Signing in..." : "Sign in"}
+                    </Text>
+                  </Button>
 
-              <View
-                className="flex-row justify-center items-center"
-                style={{ marginTop: verticalScale(18) }}
-              >
+                  <View
+                    className="flex-row justify-center items-center"
+                    style={{ marginTop: verticalScale(18) }}
+                  >
+                    <Text
+                      style={{
+                        color: colors.muted,
+                        fontSize: moderateScale(14),
+                      }}
+                    >
+                      New here?{" "}
+                    </Text>
+
+                    <Text
+                      className="font-semibold"
+                      style={{
+                        color: colors.primary,
+                        fontSize: moderateScale(14),
+                      }}
+                      onPress={onSignUpPress}
+                    >
+                      Create an account
+                    </Text>
+                  </View>
+                </View>
+              </>
+            ) : (
+              <View style={{ paddingHorizontal: scale(5) }}>
+                <Text
+                  style={{
+                    color: colors.text,
+                    fontSize: moderateScale(20),
+                    fontWeight: "700",
+                    marginBottom: verticalScale(8),
+                    textAlign: "center",
+                  }}
+                >
+                  Check your email
+                </Text>
+
                 <Text
                   style={{
                     color: colors.muted,
                     fontSize: moderateScale(14),
+                    lineHeight: moderateScale(20),
+                    marginBottom: verticalScale(18),
+                    textAlign: "center",
                   }}
                 >
-                  New here?{" "}
+                  Enter the code sent to {emailAddress.trim()}.
                 </Text>
 
-                <Text
-                  className="font-semibold"
+                <Input
                   style={{
-                    color: colors.primary,
-                    fontSize: moderateScale(14),
+                    height: verticalScale(46),
+                    fontSize: moderateScale(15),
+                    marginBottom: verticalScale(14),
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    color: colors.text,
+                    borderRadius: moderateScale(16),
+                    textAlign: "center",
                   }}
-                  onPress={onSignUpPress}
+                  placeholderTextColor={colors.muted}
+                  keyboardType="number-pad"
+                  textContentType="oneTimeCode"
+                  autoComplete="one-time-code"
+                  value={code}
+                  onChangeText={setCode}
+                  placeholder="Verification code"
+                />
+
+                <Button
+                  disabled={!canVerifyEmail}
+                  onPress={onVerifyEmailPress}
+                  style={{
+                    height: verticalScale(46),
+                    backgroundColor: colors.primary,
+                    borderRadius: moderateScale(16),
+                    opacity: canVerifyEmail ? 1 : 0.6,
+                  }}
                 >
-                  Create an account
-                </Text>
+                  <Text
+                    className="font-semibold"
+                    style={{
+                      color: primaryButtonTextColor,
+                      fontSize: moderateScale(15),
+                    }}
+                  >
+                    {isLoading ? "Verifying..." : "Verify email"}
+                  </Text>
+                </Button>
+
+                <View
+                  className="flex-row justify-center items-center"
+                  style={{ marginTop: verticalScale(18) }}
+                >
+                  <Text
+                    className="font-semibold"
+                    style={{
+                      color: colors.primary,
+                      fontSize: moderateScale(14),
+                    }}
+                    onPress={onResendCodePress}
+                  >
+                    Resend code
+                  </Text>
+
+                  <Text
+                    style={{
+                      color: colors.muted,
+                      fontSize: moderateScale(14),
+                    }}
+                  >
+                    {"  •  "}
+                  </Text>
+
+                  <Text
+                    className="font-semibold"
+                    style={{
+                      color: colors.primary,
+                      fontSize: moderateScale(14),
+                    }}
+                    onPress={onEditEmailPress}
+                  >
+                    Edit email
+                  </Text>
+                </View>
               </View>
-            </View>
+            )}
           </View>
         </View>
 

@@ -3,11 +3,20 @@ import { cn } from "@/lib/utils";
 import { COLORS } from "@/theme";
 import { useSSO, type StartSSOFlowParams } from "@clerk/expo";
 import * as AuthSession from "expo-auth-session";
+import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import * as React from "react";
 import { Image, Platform, View, type ImageSourcePropType } from "react-native";
 
 WebBrowser.maybeCompleteAuthSession();
+
+// Change this to the page you want users to land on
+// Examples:
+// "/home"
+// "/dashboard"
+// "/(tabs)"
+// "/(tabs)/home"
+const AFTER_SIGN_IN_ROUTE = "/home";
 
 type SocialConnectionStrategy = Extract<
   StartSSOFlowParams["strategy"],
@@ -34,22 +43,41 @@ const SOCIAL_CONNECTION_STRATEGIES: {
 export function SocialConnections() {
   useWarmUpBrowser();
 
+  const router = useRouter();
   const { startSSOFlow } = useSSO();
+
+  const [loadingStrategy, setLoadingStrategy] =
+    React.useState<SocialConnectionStrategy | null>(null);
 
   function onSocialLoginPress(strategy: SocialConnectionStrategy) {
     return async () => {
       try {
+        setLoadingStrategy(strategy);
+
         const { createdSessionId, setActive } = await startSSOFlow({
           strategy,
+
+          // This is the OAuth callback URL back into your Expo app.
+          // It is NOT the page users see after sign in.
           redirectUrl: AuthSession.makeRedirectUri(),
         });
 
         if (createdSessionId && setActive) {
-          await setActive({ session: createdSessionId });
+          await setActive({
+            session: createdSessionId,
+          });
+
+          // This is the actual app redirect after sign in / account creation.
+          router.replace(AFTER_SIGN_IN_ROUTE);
+
           return;
         }
+
+        console.warn("No session was created from the SSO flow.");
       } catch (err) {
-        console.error(JSON.stringify(err, null, 2));
+        console.error("Social login error:", JSON.stringify(err, null, 2));
+      } finally {
+        setLoadingStrategy(null);
       }
     };
   }
@@ -57,11 +85,15 @@ export function SocialConnections() {
   return (
     <View className="flex-row gap-3 w-full">
       {SOCIAL_CONNECTION_STRATEGIES.map((strategy) => {
+        const isLoading = loadingStrategy === strategy.type;
+        const isDisabled = loadingStrategy !== null;
+
         return (
           <Button
             key={strategy.type}
             variant="outline"
             size="sm"
+            disabled={isDisabled}
             className="flex-1 h-12 items-center justify-center"
             style={{
               height: 48,
@@ -69,6 +101,7 @@ export function SocialConnections() {
               borderWidth: 1,
               borderColor: COLORS.border,
               backgroundColor: COLORS.surface,
+              opacity: isDisabled && !isLoading ? 0.6 : 1,
               shadowColor: COLORS.text,
               shadowOpacity: 0.04,
               shadowRadius: 12,
