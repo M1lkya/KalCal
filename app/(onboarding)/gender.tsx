@@ -7,43 +7,43 @@ import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
-type GoalOption = "lose" | "maintain" | "gain";
+type GenderOption = "male" | "female" | "unspecified";
 
-type GoalProps = {
+type GenderProps = {
   onNext: () => void;
-  goal: GoalOption | null;
-  onChange: (value: GoalOption) => void;
+  gender: GenderOption | null;
+  onChange: (value: GenderOption) => void;
 };
 
-const goalOptions: {
-  value: GoalOption;
+const sexOptions: {
+  value: GenderOption;
   label: string;
 }[] = [
   {
-    value: "lose",
-    label: "Lose Weight",
+    value: "male",
+    label: "Male",
   },
   {
-    value: "maintain",
-    label: "Maintain Weight",
+    value: "female",
+    label: "Female",
   },
   {
-    value: "gain",
-    label: "Gain Weight",
+    value: "unspecified",
+    label: "Unspecified",
   },
 ];
 
-const GoalPage = ({ onNext, goal, onChange }: GoalProps) => {
+const GenderPage = ({ onNext, gender, onChange }: GenderProps) => {
   const { colors, themeName } = useAppTheme();
 
-  const [progress, setProgress] = React.useState(10);
+  const [progress] = React.useState(40);
 
   const primaryButtonTextColor =
     themeName === "dark" ? colors.background : "#FFFFFF";
 
-  const canContinue = goal !== null;
+  const canContinue = gender !== null;
 
-  function onGoalPress(value: GoalOption) {
+  function onSexPress(value: GenderOption) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onChange(value);
   }
@@ -122,7 +122,7 @@ const GoalPage = ({ onNext, goal, onChange }: GoalProps) => {
               lineHeight: moderateScale(43),
             }}
           >
-            What's your goal?
+            What&apos;s your sex?
           </Text>
 
           <Text
@@ -134,7 +134,7 @@ const GoalPage = ({ onNext, goal, onChange }: GoalProps) => {
               maxWidth: scale(285),
             }}
           >
-            Choose the option that best matches what you want to focus on.
+            This helps estimate your daily nutrition targets more accurately.
           </Text>
         </View>
 
@@ -144,14 +144,14 @@ const GoalPage = ({ onNext, goal, onChange }: GoalProps) => {
             gap: verticalScale(12),
           }}
         >
-          {goalOptions.map((option) => {
-            const selected = goal === option.value;
+          {sexOptions.map((option) => {
+            const selected = gender === option.value;
 
             return (
               <Button
                 key={option.value}
                 variant="outline"
-                onPress={() => onGoalPress(option.value)}
+                onPress={() => onSexPress(option.value)}
                 style={{
                   width: "100%",
                   height: verticalScale(58),
@@ -208,4 +208,4 @@ const GoalPage = ({ onNext, goal, onChange }: GoalProps) => {
   );
 };
 
-export default GoalPage;
+export default GenderPage;

@@ -7,43 +7,42 @@ import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
-type GoalOption = "lose" | "maintain" | "gain";
+type PreferredUnits = "imperial" | "metric";
 
-type GoalProps = {
+type UnitsPageProps = {
+  preferredUnits: PreferredUnits | null;
+  onChange: (value: PreferredUnits) => void;
   onNext: () => void;
-  goal: GoalOption | null;
-  onChange: (value: GoalOption) => void;
 };
 
-const goalOptions: {
-  value: GoalOption;
+const unitOptions: {
+  value: PreferredUnits;
   label: string;
+  description: string;
 }[] = [
   {
-    value: "lose",
-    label: "Lose Weight",
+    value: "imperial",
+    label: "Imperial",
+    description: "Pounds, feet, and inches",
   },
   {
-    value: "maintain",
-    label: "Maintain Weight",
-  },
-  {
-    value: "gain",
-    label: "Gain Weight",
+    value: "metric",
+    label: "Metric",
+    description: "Kilograms and centimeters",
   },
 ];
 
-const GoalPage = ({ onNext, goal, onChange }: GoalProps) => {
+const UnitsPage = ({ preferredUnits, onChange, onNext }: UnitsPageProps) => {
   const { colors, themeName } = useAppTheme();
 
-  const [progress, setProgress] = React.useState(10);
+  const [progress, setProgress] = React.useState(20);
 
   const primaryButtonTextColor =
     themeName === "dark" ? colors.background : "#FFFFFF";
 
-  const canContinue = goal !== null;
+  const canContinue = preferredUnits !== null;
 
-  function onGoalPress(value: GoalOption) {
+  function onUnitPress(value: PreferredUnits) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onChange(value);
   }
@@ -110,7 +109,7 @@ const GoalPage = ({ onNext, goal, onChange }: GoalProps) => {
               textTransform: "uppercase",
             }}
           >
-            Setup
+            Preferences
           </Text>
 
           <Text
@@ -122,7 +121,7 @@ const GoalPage = ({ onNext, goal, onChange }: GoalProps) => {
               lineHeight: moderateScale(43),
             }}
           >
-            What's your goal?
+            Choose your units.
           </Text>
 
           <Text
@@ -134,7 +133,7 @@ const GoalPage = ({ onNext, goal, onChange }: GoalProps) => {
               maxWidth: scale(285),
             }}
           >
-            Choose the option that best matches what you want to focus on.
+            Pick the measurement system you want to use throughout the app.
           </Text>
         </View>
 
@@ -144,17 +143,17 @@ const GoalPage = ({ onNext, goal, onChange }: GoalProps) => {
             gap: verticalScale(12),
           }}
         >
-          {goalOptions.map((option) => {
-            const selected = goal === option.value;
+          {unitOptions.map((option) => {
+            const selected = preferredUnits === option.value;
 
             return (
               <Button
                 key={option.value}
                 variant="outline"
-                onPress={() => onGoalPress(option.value)}
+                onPress={() => onUnitPress(option.value)}
                 style={{
                   width: "100%",
-                  height: verticalScale(58),
+                  height: verticalScale(68),
                   backgroundColor: selected
                     ? colors.primarySoft
                     : colors.surface,
@@ -163,15 +162,27 @@ const GoalPage = ({ onNext, goal, onChange }: GoalProps) => {
                   borderRadius: moderateScale(18),
                 }}
               >
-                <Text
-                  className="font-semibold"
-                  style={{
-                    color: selected ? colors.primary : colors.text,
-                    fontSize: moderateScale(15),
-                  }}
-                >
-                  {option.label}
-                </Text>
+                <View className="items-center justify-center">
+                  <Text
+                    className="font-semibold"
+                    style={{
+                      color: selected ? colors.primary : colors.text,
+                      fontSize: moderateScale(16),
+                    }}
+                  >
+                    {option.label}
+                  </Text>
+
+                  <Text
+                    style={{
+                      color: colors.muted,
+                      fontSize: moderateScale(13),
+                      marginTop: verticalScale(3),
+                    }}
+                  >
+                    {option.description}
+                  </Text>
+                </View>
               </Button>
             );
           })}
@@ -208,4 +219,4 @@ const GoalPage = ({ onNext, goal, onChange }: GoalProps) => {
   );
 };
 
-export default GoalPage;
+export default UnitsPage;
