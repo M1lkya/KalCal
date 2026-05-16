@@ -6,7 +6,7 @@ import ThemeSwitcher from "@/components/ui/ThemeSwitcher";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useSignIn } from "@clerk/expo";
 import * as Haptics from "expo-haptics";
-import { type Href, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import * as React from "react";
 import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -79,7 +79,7 @@ export default function SignIn() {
           return;
         }
 
-        router.replace("/" as Href);
+        router.replace("/onboarding");
       },
     });
 

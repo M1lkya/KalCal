@@ -12,7 +12,7 @@ export default function Index() {
     if (!isLoaded) return;
 
     if (isSignedIn) {
-      router.replace("/home");
+      router.replace("/onboarding");
     } else {
       router.replace("/SignUp");
     }

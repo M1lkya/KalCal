@@ -8,7 +8,7 @@ import ThemeSwitcher from "@/components/ui/ThemeSwitcher";
 import { useAppTheme } from "@/theme/ThemeContext";
 import { useSignUp } from "@clerk/expo";
 import * as Haptics from "expo-haptics";
-import { type Href, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import * as React from "react";
 import { Platform, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -126,7 +126,7 @@ export default function SignUp() {
 
     const { error: finalizeError } = await signUp.finalize({
       navigate: async () => {
-        router.replace("/" as Href);
+        router.replace("/onboarding");
       },
     });
 

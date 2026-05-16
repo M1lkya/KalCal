@@ -16,7 +16,7 @@ WebBrowser.maybeCompleteAuthSession();
 // "/dashboard"
 // "/(tabs)"
 // "/(tabs)/home"
-const AFTER_SIGN_IN_ROUTE = "/home";
+const AFTER_SIGN_IN_ROUTE = "/onboarding";
 
 type SocialConnectionStrategy = Extract<
   StartSSOFlowParams["strategy"],
