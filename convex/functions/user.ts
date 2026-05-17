@@ -14,9 +14,7 @@ export const hasUserCompletedOnboarding = query({
 
     const user = await ctx.db
       .query("users")
-      .withIndex("by_convexUserId", (q) =>
-        q.eq("convexUserId", identity.subject),
-      )
+      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", identity.subject))
       .first();
 
     return user !== null;
@@ -85,7 +83,7 @@ export const createUser = mutation({
     const now = Date.now();
 
     const userId = await ctx.db.insert("users", {
-      convexUserId: identity.subject,
+      clerkUserId: identity.subject,
 
       age: args.age,
 
@@ -120,5 +118,26 @@ export const createUser = mutation({
     });
 
     return userId;
+  },
+});
+
+export const getUser = query({
+  args: {},
+
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+
+    if (!identity) {
+      return null;
+    }
+
+    const clerkUserId = identity.subject;
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", clerkUserId))
+      .unique();
+
+    return user;
   },
 });

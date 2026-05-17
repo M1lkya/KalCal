@@ -3,7 +3,7 @@ import { v } from "convex/values";
 
 export default defineSchema({
   users: defineTable({
-    convexUserId: v.string(),
+    clerkUserId: v.string(),
 
     age: v.string(),
 
@@ -61,5 +61,34 @@ export default defineSchema({
 
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_convexUserId", ["convexUserId"]),
+  }).index("by_clerkUserId", ["clerkUserId"]),
+
+  dailyLog: defineTable({
+    clerkUserId: v.string(),
+
+    date: v.string(),
+
+    nutritionTargets: v.object({
+      caloriesKcal: v.number(),
+      proteinGrams: v.number(),
+      carbsGrams: v.number(),
+      fatGrams: v.number(),
+      fiberGrams: v.optional(v.number()),
+      sodiumMg: v.optional(v.number()),
+      sugarGrams: v.optional(v.number()),
+    }),
+
+    calories: v.number(),
+    protienGrams: v.number(),
+    fatGrams: v.number(),
+    carbsGrams: v.number(),
+    fiberGrams: v.optional(v.number()),
+    sugarGrams: v.optional(v.number()),
+    sodiumMg: v.optional(v.number()),
+
+    steps: v.optional(v.number()),
+    water: v.optional(v.number()),
+  })
+    .index("by_clerkUserId", ["clerkUserId"])
+    .index("by_clerkUserId_date", ["clerkUserId", "date"]),
 });
