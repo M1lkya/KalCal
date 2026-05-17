@@ -20,7 +20,7 @@ type PreferredUnits = "imperial" | "metric";
 type MetricsPageProps = {
   preferredUnits: PreferredUnits | null;
   onNext: (metrics: {
-    birthDate: string;
+    age: number;
     heightCm: number;
     currentWeightKg: number;
   }) => void;
@@ -94,11 +94,8 @@ const MetricsPage = ({ preferredUnits, onNext }: MetricsPageProps) => {
     const currentWeightKg =
       units === "imperial" ? weightNumber * 0.45359237 : weightNumber;
 
-    const estimatedBirthYear = new Date().getFullYear() - Math.floor(ageNumber);
-    const birthDate = `${estimatedBirthYear}-01-01`;
-
     onNext({
-      birthDate,
+      age: Math.floor(ageNumber),
       heightCm: roundToOneDecimal(heightCm),
       currentWeightKg: roundToOneDecimal(currentWeightKg),
     });

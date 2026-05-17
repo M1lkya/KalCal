@@ -1,11 +1,17 @@
 import { api } from "@/convex/_generated/api";
+import { caloireAdjustment } from "@/functions/calculateAdjustment";
+import ConvertToMacros from "@/functions/caloriesToMacro";
 import { useUser } from "@clerk/expo";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
+import { BmiKgCm, Bmr, tdee } from "../../functions/calculations";
+import ActivityPage from "./activity";
+import WeightPerWeekPage from "./fast";
 import GenderPage from "./gender";
 import GoalPage from "./goal";
+import GoalWeightPage from "./goalWeight";
 import MetricsPage from "./metrics";
 import UnitsPage from "./units";
 
@@ -13,29 +19,12 @@ type Gender = "male" | "female" | "unspecified";
 
 type PreferredUnits = "imperial" | "metric";
 
-type ActivityLevel =
-  | "sedentary"
-  | "light"
-  | "moderate"
-  | "very_active"
-  | "athlete";
+type ActivityLevel = "sedentary" | "light" | "moderate" | "athlete";
 
 type GoalType = "maintain" | "lose" | "gain";
 
-type NutritionTargetsForm = {
-  caloriesKcal: number | null;
-  proteinGrams: number | null;
-  carbsGrams: number | null;
-  fatGrams: number | null;
-  fiberGrams: number | null;
-  sodiumMg: number | null;
-  sugarGrams: number | null;
-};
-
 type OnboardingForm = {
-  convexUserId: string | null;
-
-  birthDate: string | null;
+  age: number | null;
 
   heightCm: number | null;
 
@@ -53,7 +42,13 @@ type OnboardingForm = {
 
   activityMultiplier: number | null;
 
-  nutritionTargets: NutritionTargetsForm;
+  caloriesKcal: number | null;
+  proteinGrams: number | null;
+  carbsGrams: number | null;
+  fatGrams: number | null;
+  fiberGrams: number | null;
+  sodiumMg: number | null;
+  sugarGrams: number | null;
 
   gender: Gender | null;
 
@@ -69,6 +64,7 @@ type OnboardingForm = {
 
 export default function Onboarding() {
   const { isSignedIn, user, isLoaded } = useUser();
+  const createUser = useMutation(api.functions.user.createUser);
   const [step, setStep] = useState(0);
 
   const hasCompletedOnboarding = useQuery(
@@ -79,10 +75,8 @@ export default function Onboarding() {
   const back = () => setStep((s) => Math.max(s - 1, 0));
 
   const [form, setForm] = React.useState<OnboardingForm>({
-    convexUserId: null,
-
     // added as age
-    birthDate: null,
+    age: null,
 
     //added
     heightCm: null,
@@ -90,43 +84,146 @@ export default function Onboarding() {
     //added
     currentWeightKg: null,
 
+    //added
     goalWeightKg: null,
 
+    //added
     goalRateKgPerWeek: null,
 
+    //calculated in submit form
     currentBmi: null,
 
+    // calculated in submit form and set
     currentBmrKcalPerDay: null,
+    // calculated in the submit form and set
     currentTdeeKcalPerDay: null,
 
+    // example is like if your losing this would be like -500 calorie deficit or gaining + 500 calorie deficit
+    //calculated and set in the submit form
     dailyCalorieAdjustmentKcal: null,
 
+    //added
     activityMultiplier: null,
 
-    nutritionTargets: {
-      caloriesKcal: null,
-      proteinGrams: null,
-      carbsGrams: null,
-      fatGrams: null,
-      fiberGrams: null,
-      sodiumMg: null,
-      sugarGrams: null,
-    },
+    // added and set in the submit forrm
+    caloriesKcal: null,
+    proteinGrams: null,
+    carbsGrams: null,
+    fatGrams: null,
+    fiberGrams: null,
+    sodiumMg: null,
+    sugarGrams: null,
 
     //added
     gender: null,
 
-    //done
+    //added
     preferredUnits: null,
 
+    //added
     activityLevel: null,
 
-    //done
+    //added
     goalType: null,
 
     createdAt: null,
     updatedAt: null,
   });
+
+  // onSubmit
+  const onSubmit = async () => {
+    if (
+      form.currentWeightKg === null ||
+      form.heightCm === null ||
+      form.age === null ||
+      form.gender === null ||
+      form.activityMultiplier === null ||
+      form.goalType === null ||
+      form.goalRateKgPerWeek === null
+    ) {
+      console.log("Missing required fields:", form);
+      return;
+    }
+
+    const bmi = BmiKgCm(form.currentWeightKg, form.heightCm);
+
+    const bmr = Bmr(form.heightCm, form.gender, form.currentWeightKg, form.age);
+
+    const TDEE = tdee(bmr, form.activityMultiplier);
+
+    const adjustment = caloireAdjustment(
+      TDEE,
+      form.goalType,
+      form.goalRateKgPerWeek,
+    );
+
+    const macros = ConvertToMacros(adjustment.targetCalories);
+
+    const updatedForm: OnboardingForm = {
+      ...form,
+
+      currentBmi: bmi,
+      currentBmrKcalPerDay: bmr,
+      currentTdeeKcalPerDay: TDEE,
+      dailyCalorieAdjustmentKcal: adjustment.calorieChange,
+
+      caloriesKcal: adjustment.targetCalories,
+      proteinGrams: macros.proteinGrams,
+      carbsGrams: macros.carbsGrams,
+      fatGrams: macros.fatGrams,
+      fiberGrams: macros.fiberGrams,
+      sodiumMg: macros.sodiumMg,
+      sugarGrams: macros.sugarGrams,
+
+      updatedAt: Date.now(),
+    };
+
+    setForm(updatedForm);
+
+    console.log("Updated onboarding form:", updatedForm);
+
+    try {
+      const account = await createUser({
+        age: String(updatedForm.age),
+
+        heightCm: form.heightCm,
+
+        currentWeightKg: form.currentWeightKg,
+        goalWeightKg: updatedForm.goalWeightKg ?? undefined,
+
+        goalRateKgPerWeek: updatedForm.goalRateKgPerWeek ?? undefined,
+
+        currentBmi: updatedForm.currentBmi ?? undefined,
+
+        currentBmrKcalPerDay: updatedForm.currentBmrKcalPerDay ?? undefined,
+        currentTdeeKcalPerDay: updatedForm.currentTdeeKcalPerDay ?? undefined,
+
+        dailyCalorieAdjustmentKcal:
+          updatedForm.dailyCalorieAdjustmentKcal ?? undefined,
+
+        activityMultiplier: updatedForm.activityMultiplier ?? undefined,
+
+        nutritionTargets: {
+          caloriesKcal: updatedForm.caloriesKcal!,
+          proteinGrams: updatedForm.proteinGrams!,
+          carbsGrams: updatedForm.carbsGrams!,
+          fatGrams: updatedForm.fatGrams!,
+          fiberGrams: updatedForm.fiberGrams ?? undefined,
+          sodiumMg: updatedForm.sodiumMg ?? undefined,
+          sugarGrams: updatedForm.sugarGrams ?? undefined,
+        },
+
+        gender: form.gender,
+
+        preferredUnits: updatedForm.preferredUnits!,
+
+        activityLevel: updatedForm.activityLevel!,
+
+        goalType: form.goalType,
+      });
+      router.replace("/home");
+    } catch (error) {}
+  };
 
   React.useEffect(() => {
     if (!isLoaded) return;
@@ -145,7 +242,6 @@ export default function Onboarding() {
 
     setForm((prev) => ({
       ...prev,
-      convexUserId: user.id,
       updatedAt: Date.now(),
     }));
   }, [isLoaded, isSignedIn, user, hasCompletedOnboarding]);
@@ -183,10 +279,10 @@ export default function Onboarding() {
       {step === 2 && (
         <MetricsPage
           preferredUnits={form.preferredUnits}
-          onNext={({ birthDate, heightCm, currentWeightKg }) => {
+          onNext={({ age, heightCm, currentWeightKg }) => {
             setForm((prev) => ({
               ...prev,
-              birthDate,
+              age,
               heightCm,
               currentWeightKg,
               updatedAt: Date.now(),
@@ -210,9 +306,57 @@ export default function Onboarding() {
           onNext={next}
         />
       )}
-      {step === 4 && <Text>Step 5</Text>}
-      {step === 5 && <Text>Step 6</Text>}
-      {step === 6 && <Text>Step 7</Text>}
+      {step === 4 && (
+        <GoalWeightPage
+          goalType={form.goalType}
+          goalWeightKg={form.goalWeightKg}
+          currentWeightKg={form.currentWeightKg}
+          unitPreference={form.preferredUnits}
+          onChange={(goalWeightKg) =>
+            setForm((prev) => ({
+              ...prev,
+              goalWeightKg,
+              updatedAt: Date.now(),
+            }))
+          }
+          onNext={next}
+        />
+      )}
+      {step === 5 && (
+        <ActivityPage
+          activityLevel={form.activityLevel}
+          activityMultiplier={form.activityMultiplier}
+          onChangeActivityLevel={(activityLevel) =>
+            setForm((prev) => ({
+              ...prev,
+              activityLevel,
+              updatedAt: Date.now(),
+            }))
+          }
+          onChangeActivityMultiplier={(activityMultiplier) =>
+            setForm((prev) => ({
+              ...prev,
+              activityMultiplier,
+              updatedAt: Date.now(),
+            }))
+          }
+          onNext={next}
+        />
+      )}
+      {step === 6 && (
+        <WeightPerWeekPage
+          goalRateKgPerWeek={form.goalRateKgPerWeek}
+          preferredUnits={form.preferredUnits}
+          onChange={(goalRateKgPerWeek) =>
+            setForm((prev) => ({
+              ...prev,
+              goalRateKgPerWeek,
+              updatedAt: Date.now(),
+            }))
+          }
+          onSubmit={onSubmit}
+        />
+      )}
     </View>
   );
 }

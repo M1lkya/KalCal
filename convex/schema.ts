@@ -5,9 +5,7 @@ export default defineSchema({
   users: defineTable({
     convexUserId: v.string(),
 
-    displayName: v.optional(v.string()),
-
-    birthDate: v.string(),
+    age: v.string(),
 
     heightCm: v.number(),
 
@@ -40,7 +38,7 @@ export default defineSchema({
       sugarGrams: v.optional(v.number()),
     }),
 
-    sex: v.union(
+    gender: v.union(
       v.literal("male"),
       v.literal("female"),
       v.literal("unspecified"),
@@ -52,7 +50,6 @@ export default defineSchema({
       v.literal("sedentary"),
       v.literal("light"),
       v.literal("moderate"),
-      v.literal("very_active"),
       v.literal("athlete"),
     ),
 
