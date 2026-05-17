@@ -12,8 +12,10 @@ export default function Index() {
     if (!isLoaded) return;
 
     if (isSignedIn) {
+      console.log("ROOT-index.tsx: user signed in sending to /home");
       router.replace("/home");
     } else {
+      console.log("ROOT-index.tsx: user not signed in sending to /SignUp");
       router.replace("/SignUp");
     }
   }, [isLoaded, isSignedIn]);

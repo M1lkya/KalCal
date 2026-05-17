@@ -1,8 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import { caloireAdjustment } from "@/functions/calculateAdjustment";
 import ConvertToMacros from "@/functions/caloriesToMacro";
-import { useUser } from "@clerk/expo";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import { View } from "react-native";
@@ -63,13 +62,8 @@ type OnboardingForm = {
 };
 
 export default function Onboarding() {
-  const { isSignedIn, user, isLoaded } = useUser();
   const createUser = useMutation(api.functions.user.createUser);
   const [step, setStep] = useState(0);
-
-  const hasCompletedOnboarding = useQuery(
-    api.functions.user.hasUserCompletedOnboarding,
-  );
 
   const next = () => setStep((s) => Math.min(s + 1, 6));
   const back = () => setStep((s) => Math.max(s - 1, 0));
@@ -226,25 +220,11 @@ export default function Onboarding() {
   };
 
   React.useEffect(() => {
-    if (!isLoaded) return;
-
-    if (!isSignedIn || !user) {
-      router.replace("/SignUp");
-      return;
-    }
-
-    if (hasCompletedOnboarding === undefined) return;
-
-    if (hasCompletedOnboarding) {
-      router.replace("/home");
-      return;
-    }
-
     setForm((prev) => ({
       ...prev,
       updatedAt: Date.now(),
     }));
-  }, [isLoaded, isSignedIn, user, hasCompletedOnboarding]);
+  }, []);
 
   return (
     <View style={{ flex: 1 }}>
