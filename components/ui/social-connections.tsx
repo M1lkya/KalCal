@@ -8,6 +8,7 @@ import * as WebBrowser from "expo-web-browser";
 import * as React from "react";
 import { Image, Platform, View, type ImageSourcePropType } from "react-native";
 
+const SOCIAL_LOGIN_DISABLED = true;
 WebBrowser.maybeCompleteAuthSession();
 
 // Change this to the page you want users to land on
@@ -51,6 +52,7 @@ export function SocialConnections() {
 
   function onSocialLoginPress(strategy: SocialConnectionStrategy) {
     return async () => {
+      if (SOCIAL_LOGIN_DISABLED) return;
       try {
         setLoadingStrategy(strategy);
 
